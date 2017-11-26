@@ -1,30 +1,134 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Entity;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Net;
 using System.Web;
 using System.Web.Mvc;
+using PrintingSystem.Models;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.Owin;
 
 namespace PrintingSystem.Controllers
 {
     public class HomeController : Controller
     {
-        public ActionResult Index()
+        private ApplicationDbContext db = new ApplicationDbContext();
+
+        // GET: Home
+        public async Task<ActionResult> Index()
+        {
+            var list = await db.PrintingInputs.Include(p => p.User).ToListAsync();
+            return View(list);
+        }
+
+        // GET: Home/Details/5
+        public async Task<ActionResult> Details(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+            PrintingInput printingInput = await db.PrintingInputs.Include(p => p.User).SingleOrDefaultAsync(p => p.Id == id);
+            if (printingInput == null)
+            {
+                return HttpNotFound();
+            }
+            return View(printingInput);
+        }
+
+        // GET: Home/Create
+        public ActionResult Create()
         {
             return View();
         }
 
-        public ActionResult About()
+        // POST: Home/Create
+        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
+        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Create([Bind(Include = "Id,PrinterQuantity,PhotocopyQuantity,Purpose,Date")] PrintingInput printingInput)
         {
-            ViewBag.Message = "Your application description page.";
+            if (ModelState.IsValid)
+            {
+                var userId = User.Identity.GetUserId();
+                printingInput.User = db.Users.SingleOrDefault(u => u.Id == userId);
+                db.PrintingInputs.Add(printingInput);
+                await db.SaveChangesAsync();
+                return RedirectToAction("Index");
+            }
 
-            return View();
+            return View(printingInput);
         }
 
-        public ActionResult Contact()
+        // GET: Home/Edit/5
+        public async Task<ActionResult> Edit(int? id)
         {
-            ViewBag.Message = "Your contact page.";
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+            PrintingInput printingInput = await db.PrintingInputs.FindAsync(id);
+            if (printingInput == null)
+            {
+                return HttpNotFound();
+            }
+            return View(printingInput);
+        }
 
-            return View();
+        // POST: Home/Edit/5
+        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
+        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Edit([Bind(Include = "Id,PrinterQuantity,PhotocopyQuantity,Purpose,Date")] PrintingInput printingInput)
+        {
+            if (ModelState.IsValid)
+            {
+                
+                db.Entry(printingInput).State = EntityState.Modified;
+                await db.SaveChangesAsync();
+                return RedirectToAction("Index");
+            }
+            return View(printingInput);
+        }
+
+        // GET: Home/Delete/5
+        public async Task<ActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+            PrintingInput printingInput = await db.PrintingInputs.FindAsync(id);
+            if (printingInput == null)
+            {
+                return HttpNotFound();
+            }
+            return View(printingInput);
+        }
+
+        // POST: Home/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> DeleteConfirmed(int id)
+        {
+            PrintingInput printingInput = await db.PrintingInputs.FindAsync(id);
+            db.PrintingInputs.Remove(printingInput);
+            await db.SaveChangesAsync();
+            return RedirectToAction("Index");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
